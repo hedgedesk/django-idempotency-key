@@ -86,6 +86,9 @@ def get_lock_time_to_live():
     return get_lock_settings().get("TTL", 300)  # default to 5 minutes
 
 
+def get_key_timeout():
+    return get_lock_settings().get("KEY_TTL", 86400)  # default to 24 hours
+
 def get_lock_name():
     return get_lock_settings().get("NAME", "MyLock")
 

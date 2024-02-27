@@ -14,6 +14,16 @@ class MissingIdempotencyKeyError(Exception):
     """
     pass
 
+class TooLongIdempotencyKeyError(Exception):
+    def __init__(self, msg=None):
+        if msg is None:
+            msg = "Idempotency key cannot be more than 255 characters."
+        super().__init__(msg)
+
+    """
+    Raised when an idempotency key has not been specified
+    """
+    pass
 
 class DecoratorsMutuallyExclusiveError(Exception):
     pass

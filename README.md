@@ -118,7 +118,7 @@ from idempotency_key import status
 IDEMPOTENCY_KEY = {
     # Specify the key encoder class to be used for idempotency keys.
     # If not specified then defaults to 'idempotency_key.encoders.BasicKeyEncoder'
-    'ENCODER_CLASS': 'idempotency_key.encoders.BasicKeyEncoder',
+    'ENCODER_CLASS': 'idempotency_key.encoders.MaxLengthKeyEncoder',
 
     # Set the response code on a conflict.
     # If not specified this defaults to HTTP_409_CONFLICT
@@ -126,12 +126,12 @@ IDEMPOTENCY_KEY = {
     'CONFLICT_STATUS_CODE': status.HTTP_409_CONFLICT,
 
     # Allows the idempotency key header sent from the client to be changed
-    'HEADER': 'HTTP_IDEMPOTENCY_KEY',
+    'HEADER': 'x-idempotency-key',
 
     'STORAGE': {
         # Specify the storage class to be used for idempotency keys
         # If not specified then defaults to 'idempotency_key.storage.MemoryKeyStorage'
-        'CLASS': 'idempotency_key.storage.MemoryKeyStorage',
+        'CLASS': 'idempotency_key.storage.CacheKeyStorage',
 
         # Name of the django cache configuration to use for the CacheStorageKey storage
         # class.
@@ -160,18 +160,21 @@ IDEMPOTENCY_KEY = {
     'LOCK': {
         # Specify the key object locking class to be used for locking access to the cache storage object.
         # If not specified then defaults to 'idempotency_key.locks.basic.ThreadLock'
-        'CLASS': 'idempotency_key.locks.basic.ThreadLock',
+        'CLASS': 'idempotency_key.locks.basic.MultiProcessRedisKeyLock',
 
         # Location of the Redis server if MultiProcessRedisLock is used otherwise this is ignored.
         # The host name can be specified or both the host name and the port separated by a colon ':'
-        'LOCATION': 'localhost:6379',
+        'LOCATION': 'redis://localhost:6379/1',
 
-        # The unique name to be used accross processes for the lock. Only used by the MultiProcessRedisLock class
+        # The unique name to be used across processes for the lock. Only used by the MultiProcessRedisLock class
         'NAME': 'MyLock',
 
         # The maximum time to live for the lock. If a lock is given and is never released this timeout forces the release
         # The lock time is in seconds and the default is None which means lock until it is manually released
         'TTL': None,
+
+        # The maximum time for a key to live as an integer seconds. Only used by the MultiProcessRedisLock classes
+        'KEY_TTL': 86400,
 
         # The use of a lock around the storage object so that only one thread at a time can access it.
         # By default this is set to true. WARNING: setting this to false may allow duplicate calls to occur if the timing

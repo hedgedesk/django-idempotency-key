@@ -28,3 +28,47 @@ class MultiProcessRedisLock(IdempotencyKeyLock):
 
     def release(self):
         self.storage_lock.release()
+
+
+class MultiProcessRedisKeyLock(IdempotencyKeyLock):
+    """
+    Should be used if a lock is required across processes. Note that this class uses
+    Redis in order to perform the lock.
+    """
+
+    redis_obj = None # singleton connection
+    def __init__(self, idempotency_key=None):
+
+        if not self.is_alive():
+            location = utils.get_lock_location()
+            if location is None or location == "":
+                raise ValueError("Redis server location must be set in the settings file.")
+
+            MultiProcessRedisKeyLock.redis_obj = Redis.from_url(location)
+
+        lock_name = (
+            f"{utils.get_lock_name()}-{idempotency_key}"
+            if idempotency_key
+            else utils.get_lock_name()
+        )
+        self.storage_lock = self.redis_obj.lock(
+            name=lock_name,
+            # Time before lock is forcefully released.
+            timeout=utils.get_lock_time_to_live(),
+            blocking_timeout=utils.get_lock_timeout(),
+        )
+
+    def is_alive(self):
+        try:
+            self.redis_obj.ping()
+            return True
+        except:
+            return False
+
+    def acquire(self, *args, **kwargs) -> bool:
+        return self.storage_lock.acquire(blocking=False)
+
+    def release(self):
+        # Just incase if Middleware releases without acquiring. Less likely. Ignoring it instead of popping up an error.
+        with suppress(Exception):
+            self.storage_lock.release()

@@ -197,6 +197,7 @@ class IdempotencyKeyMiddleware:
                     request.idempotency_key_cache_name,
                     request.idempotency_key_encoded_key,
                     response,
+                    expiry=utils.get_key_timeout(),
                 )
 
         return response
@@ -252,3 +253,38 @@ class ExemptIdempotencyKeyMiddleware(IdempotencyKeyMiddleware):
         )
         request.idempotency_key_manual = idempotency_key_manual
         request.idempotency_key_cache_name = idempotency_key_cache_name
+
+
+class ExemptIdempotencyKeyBetterLockMiddleware(ExemptIdempotencyKeyMiddleware):
+    def __init__(self, get_response):
+        super().__init__(get_response)
+        self.storage_lock_class = utils.get_lock_class()
+
+    def reload_storage_lock(self, encoded_key):
+        self.storage_lock = self.storage_lock_class(encoded_key)
+
+    def release_lock(self):
+        self.storage_lock.release()
+
+    def acquire_lock(self):
+        return self.storage_lock.acquire()
+
+    def generate_response(self, request, encoded_key, lock=None):
+        # The default storage lock is established with a common lock prefix shared among all locks.
+        # To generate a lock with an encoded key, simply reload the storage lock.
+        self.reload_storage_lock(encoded_key)
+
+        if lock is None:
+            lock = utils.get_lock_enable()
+
+        if not lock:
+            return self.perform_generate_response(request, encoded_key)
+
+        # If there was a timeout for a lock on the storage object then return a
+        # HTTP_423_LOCKED
+        if not self.acquire_lock():
+            return resource_locked(request, None)
+        try:
+            return self.perform_generate_response(request, encoded_key)
+        finally:
+            self.release_lock()

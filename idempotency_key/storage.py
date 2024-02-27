@@ -45,7 +45,7 @@ class MemoryKeyStorage(IdempotencyKeyStorage):
     def __init__(self):
         self.idempotency_key_cache_data = defaultdict(dict)
 
-    def store_data(self, cache_name: str, encoded_key: str, response: object) -> None:
+    def store_data(self, cache_name: str, encoded_key: str, response: object, expiry: int = None) -> None:
         self.idempotency_key_cache_data[cache_name][encoded_key] = response
 
     def retrieve_data(self, cache_name: str, encoded_key: str) -> Tuple[bool, object]:
@@ -61,9 +61,9 @@ class MemoryKeyStorage(IdempotencyKeyStorage):
 
 
 class CacheKeyStorage(IdempotencyKeyStorage):
-    def store_data(self, cache_name: str, encoded_key: str, response: object) -> None:
+    def store_data(self, cache_name: str, encoded_key: str, response: object, expiry: int = None) -> None:
         str_response = pickle.dumps(response)
-        caches[cache_name].set(encoded_key, str_response)
+        caches[cache_name].set(encoded_key, str_response, ex=expiry)
 
     def retrieve_data(self, cache_name: str, encoded_key: str) -> Tuple[bool, object]:
         if encoded_key in caches[cache_name]:
