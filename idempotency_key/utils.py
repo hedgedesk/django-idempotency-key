@@ -23,7 +23,6 @@ def get_encoder_class():
         )
     )
 
-
 def get_conflict_code():
     return get_idempotency_key_settings().get(
         "CONFLICT_STATUS_CODE", status.HTTP_409_CONFLICT
@@ -33,6 +32,8 @@ def get_conflict_code():
 def get_storage_settings():
     return get_idempotency_key_settings().get("STORAGE", dict())
 
+def get_telemetry():
+    return get_idempotency_key_settings().get("TELEMETRY", False)
 
 def get_storage_class():
     return module_loading.import_string(

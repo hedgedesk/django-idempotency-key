@@ -1,4 +1,5 @@
 import logging
+import time
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -24,11 +25,17 @@ class IdempotencyKeyMiddleware:
         self.storage = utils.get_storage_class()()
         self.encoder = utils.get_encoder_class()()
         self.storage_lock = utils.get_lock_class()()
+        self.telemetry = utils.get_telemetry()
 
     def __call__(self, request):
+        if self.telemetry:
+            start_time = time.time()
         self.process_request(request)
         response = self.get_response(request)
         response = self.process_response(request, response)
+        if self.telemetry:
+            response.headers['x-request-duration-ms'] = (time.time() - start_time) * 1000
+            response.headers['x-request-start-time'] = str(start_time)
         return response
 
     @staticmethod

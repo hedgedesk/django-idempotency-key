@@ -128,6 +128,9 @@ IDEMPOTENCY_KEY = {
     # Allows the idempotency key header sent from the client to be changed
     'HEADER': 'x-idempotency-key',
 
+    # Adds x-request-duration-ms and x-request-start-time to response headers
+    'TELEMETRY': True,
+    
     'STORAGE': {
         # Specify the storage class to be used for idempotency keys
         # If not specified then defaults to 'idempotency_key.storage.MemoryKeyStorage'
